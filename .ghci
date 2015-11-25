@@ -1,0 +1,8 @@
+:set -XGADTs
+:set -XTypeFamilies
+:set -XDataKinds
+:set -XPolyKinds
+:set -XKindSignatures
+:set -XRankNTypes
+:set -XTypeOperators
+:set -XOverloadedStrings

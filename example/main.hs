@@ -16,6 +16,7 @@ import Data.Singletons.TH
 import Data.Singletons.Prelude
 import Serpentine
 import Serpentine.Crud
+import Serpentine.PathPiece
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
@@ -64,25 +65,19 @@ sPlanMyRoute r = case r of
   SDogR c   -> SCons (SStatic :: SPiece ('Static "dog")) (sPlanCrudRoute (Proxy :: Proxy DogId) c)
   SHouseR c -> SCons (SStatic :: SPiece ('Static "house")) (sPlanCrudRoute (Proxy :: Proxy Int) c)
 
-parseMyRoute :: [Text] -> Maybe (SomeSingWith PlanMyRouteSym0)
+parseMyRoute :: [Text] -> Maybe (SomeRoutePieces PlanMyRouteSym0)
 parseMyRoute = parseAllRoutes (Proxy :: Proxy PlanMyRouteSym0) sPlanMyRoute
 
-sPlanMyRoute' :: Proxy PlanMyRouteSym0 -> Sing n -> Sing (PlanMyRoute n)
-sPlanMyRoute' _ = sPlanMyRoute
-
-allMyRoutes :: forall (routes :: [MyRoute]). routes ~ EnumFromTo MinBound MaxBound => SList routes
-allMyRoutes = sEnumAll
-
 renderMyRoute :: Sing route 
-              -> PiecesNestedTuple (PlanMyRoute route) 
+              -> IRec (PiecesNestedTuple (PlanMyRoute route))
               -> [Text] 
 renderMyRoute = render (Proxy :: Proxy PlanMyRouteSym0) sPlanMyRoute
 
 main :: IO ()
 main = do
-  r SProfileR     (44, ())
-  r SRenameR      (33,("Bob",()))
-  r (SDogR SAddR) ()
+  r SProfileR     (44 :& IRNil)
+  r SRenameR      (33 :& "Bob" :& IRNil)
+  r (SDogR SAddR) (IRNil)
   print (p "/bad/path")
   print (p "/user/edit/12/Jonathon")
   print (p "/house/edit/66")

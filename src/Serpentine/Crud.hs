@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs, TypeFamilies,DataKinds,PolyKinds,KindSignatures #-}
 {-# LANGUAGE UndecidableInstances, TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE InstanceSigs, FlexibleContexts #-}
@@ -6,6 +7,7 @@ module Serpentine.Crud where
 
 import Prelude
 import Serpentine
+import Serpentine.PathPiece
 import Data.Singletons.TH
 import Data.Singletons.Prelude
 import Data.Typeable (Typeable)

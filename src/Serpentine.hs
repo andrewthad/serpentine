@@ -17,6 +17,38 @@ import Data.Singletons.Prelude
 import GHC.TypeLits
 import Serpentine.PathPiece
 import qualified Data.Text as Text
+import Language.Haskell.TH
+import Control.Monad
+
+iterConstructors :: Name -> Q Exp
+iterConstructors name = stringE . show =<< reify name
+
+constConstructors :: Name -> Name -> Name -> Q Exp
+constConstructors vname name val = do
+  TyConI (DataD _ _ _ ctors _) <- reify name
+  matches <- forM ctors $ \(NormalC cname args) -> case args of
+    [] -> return $ Match (ConP (sketchyNameSingletonize cname) []) (NormalB $ VarE val) []
+    [(_,ConT tname)] -> do
+      let vnameNext = mkName "j"
+      r <- constConstructors vnameNext tname val
+      return $ Match (ConP (sketchyNameSingletonize cname) [VarP vnameNext]) (NormalB r) []
+  return $ CaseE (VarE vname) matches
+
+sketchyNameSingletonize :: Name -> Name
+sketchyNameSingletonize = id
+  . mkName . ('S':) . reverse 
+  . takeWhile (/= '.') . reverse . show
+
+-- constConstructors :: Name -> Name -> Name -> Q Exp
+-- constConstructors vname name val = do
+--   TyConI (DataD _ _ _ ctors _) <- reify name
+--   matches <- forM ctors $ \(NormalC cname args) -> case args of
+--     [] -> return $ Match (ConP cname []) (NormalB $ VarE val) []
+--     [(_,ConT tname)] -> do
+--       let vnameNext = mkName "j"
+--       r <- constConstructors vnameNext tname val
+--       return $ Match (ConP cname [VarP vnameNext]) (NormalB r) []
+--   return $ CaseE (VarE vname) matches
 
 
 data IRec :: [*] -> * where

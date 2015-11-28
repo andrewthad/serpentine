@@ -20,6 +20,10 @@ import Serpentine.PathPiece
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
+data Foo   = Bar | Baz
+data Thing = This | That Foo
+data Color = Red | Green | Blue Thing
+
 $(singletons [d|
   data MyRoute = UsersR 
                | ProfileR 
@@ -46,6 +50,12 @@ $(singletons [d|
     maxBound = RenameR
   |])
 
+-- myChar :: Char
+-- myChar = 'T'
+-- 
+-- colorToChar :: Color -> Char
+-- colorToChar c = $(constConstructors 'c ''Color 'myChar)
+
 newtype DogId = DogId { getDogId :: Int }
   deriving (Eq,Ord,Typeable,PathPiece)
 
@@ -57,13 +67,16 @@ type family PlanMyRoute (k :: MyRoute) :: [Piece *] where
   PlanMyRoute ('HouseR crud) = 'Static "house" ': PlanCrudRoute Int crud
 genDefunSymbols [''PlanMyRoute]
 
+-- sPlanMyRoute :: SMyRoute route -> SList (PlanMyRoute route)
+-- sPlanMyRoute r = case r of
+--   SUsersR   -> defPieces
+--   SProfileR -> defPieces
+--   SRenameR  -> defPieces
+--   SDogR c   -> SCons (SStatic :: SPiece ('Static "dog")) (sPlanCrudRoute (Proxy :: Proxy DogId) c)
+--   SHouseR c -> SCons (SStatic :: SPiece ('Static "house")) (sPlanCrudRoute (Proxy :: Proxy Int) c)
+
 sPlanMyRoute :: SMyRoute route -> SList (PlanMyRoute route)
-sPlanMyRoute r = case r of
-  SUsersR   -> defPieces
-  SProfileR -> defPieces
-  SRenameR  -> defPieces
-  SDogR c   -> SCons (SStatic :: SPiece ('Static "dog")) (sPlanCrudRoute (Proxy :: Proxy DogId) c)
-  SHouseR c -> SCons (SStatic :: SPiece ('Static "house")) (sPlanCrudRoute (Proxy :: Proxy Int) c)
+sPlanMyRoute r = $(constConstructors 'r ''MyRoute 'defPieces)
 
 parseMyRoute :: [Text] -> Maybe (SomeRoutePieces PlanMyRouteSym0)
 parseMyRoute = parseAllRoutes (Proxy :: Proxy PlanMyRouteSym0) sPlanMyRoute

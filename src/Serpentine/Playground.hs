@@ -32,18 +32,16 @@ data CaptureSym0 :: (TyFun k (Piece k) -> *)
 type instance Apply CaptureSym0 s = CaptureSym1 s
 
 $(singletons [d|
-  data MyRoute = UsersR 
-               | ProfileR 
-               | HomeR
-  |])
-
-$(singletons [d|
   captures :: [Piece x] -> [x]
   captures [] = []
   captures (Static _ : xs) = captures xs
   captures (Capture c : xs) = c : captures xs
   |])
 
+
+------------------------
+-- Route rendering
+------------------------
 render :: 
      Proxy f
   -> (forall route1. Sing route1 -> Sing (Apply f route1))
@@ -71,3 +69,44 @@ renderPieces renderFunc spieces attrs =
 
 renderSymbol :: forall s. SSymbol s -> Text
 renderSymbol SSym = Text.pack (symbolVal (Proxy :: Proxy s))
+
+------------------------
+-- Route parsing
+------------------------
+-- data SomeRoutePieces (f :: TyFun k [Piece *] -> *) where
+--   SomeRoutePieces :: Sing (a :: k) -> Sing (Apply g a) 
+--                   -> Rec (Attre (PiecesNestedTuple (Apply g a))
+--                   -> SomeRoutePieces g
+-- 
+-- parsePiecesMulti :: forall e (pieces :: [Piece *]).
+--   SList 
+--   -> (forall x. Sing x -> Text -> Maybe (Attr e x))
+--   -> [Text] 
+--   -> Maybe (Rec (Attr e) (Captures pieces))
+-- parsePiecesMulti = 
+
+parsePieces :: forall e (pieces :: [Piece *]).
+  (forall x. Sing x -> Text -> Maybe (Attr e x))
+  -> SList pieces -> [Text] -> Maybe (Rec (Attr e) (Captures pieces))
+parsePieces parsePiece s pieces = 
+  case s of
+    SNil -> if null pieces then Just RNil else Nothing
+    SCons spiece snext -> 
+      case pieces of
+        [] -> Nothing
+        (piece:piecesNext) -> 
+          case spiece of
+            SStatic sym -> 
+              if renderSymbol sym == piece
+                then parsePieces parsePiece snext piecesNext
+                else Nothing
+            SCapture sitem -> (:&)
+              <$> parsePiece sitem piece 
+              <*> parsePieces parsePiece snext piecesNext
+
+-- parseSingle :: 
+--   (forall x. Sing x -> Text -> Maybe (Attr e x))
+--   -> SPiece item -> Text -> Maybe (Attr e item)
+-- parseSingle 
+
+

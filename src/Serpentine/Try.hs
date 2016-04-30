@@ -14,14 +14,30 @@ import qualified Data.Text as Text
 
 $(singletons [d|
   data Item = ItemInt | ItemText | ItemBool
+  data Crud = AddR | EditR | DeleteR | ViewR
+  data MyRoute = UsersR 
+               | ProfileR 
+               | HomeR
+               | DogR Crud
   |])
 
+
 $(singletonsOnly [d|
+  planCrud :: n -> Crud -> [Piece n]
+  planCrud n x = 
+    case x of
+      AddR    -> [Static "add"]
+      EditR   -> [Static "edit", Capture n]
+      DeleteR -> [Static "delete", Capture n]
+      ViewR   -> [Static "view", Capture n]
+
   plan :: MyRoute -> [Piece Item]
-  plan x = case x of
-    UsersR   -> [Static "user", Static "index"]
-    ProfileR -> [Static "profile", Capture ItemInt]
-    HomeR    -> []
+  plan x = 
+    case x of
+      UsersR    -> [Static "user", Static "index"]
+      ProfileR  -> [Static "profile", Capture ItemInt]
+      HomeR     -> []
+      DogR crud -> Static "dog" : planCrud ItemInt crud
   |])
 
 type family ItemType (x :: Item) where
@@ -42,7 +58,8 @@ renderMyRoute :: SMyRoute x
               -> [Text]
 renderMyRoute = render (Proxy :: Proxy PlanSym0) sPlan renderAnyItem 
 
-test1, test2 :: [Text]
+test1, test2, test3 :: [Text]
 test1 = renderMyRoute SProfileR (Attr 33 :& RNil)
 test2 = renderMyRoute SUsersR RNil
+test3 = renderMyRoute (SDogR SViewR) (Attr 12 :& RNil)
 

@@ -12,15 +12,13 @@ import Data.Vinyl.Core
 import Data.Text (Text)
 import qualified Data.Text as Text
 import GHC.TypeLits
+import Data.Singletons.Class (Applied1(..))
 
 data Piece x = Static Symbol | Capture x
 
 data instance Sing (k :: Piece a) where
   SStatic :: (x ~ 'Static s) => SSymbol s -> Sing x
   SCapture :: (x ~ 'Capture b) => Sing b -> Sing x
-
-newtype Attr (f :: TyFun k * -> *) (attr :: k) =
-  Attr {getAttr :: Apply f attr}
 
 type StaticSym1 s = 'Static s
 type CaptureSym1 x = 'Capture x
@@ -45,17 +43,17 @@ $(singletons [d|
 render :: 
      Proxy f
   -> (forall route1. Sing route1 -> Sing (Apply f route1))
-  -> (forall x. Sing x -> Attr e x -> Text)
+  -> (forall x. Sing x -> Applied1 e x -> Text)
   -> Sing route
-  -> Rec (Attr e) (Captures (Apply f route))
+  -> Rec (Applied1 e) (Captures (Apply f route))
   -> [Text]
 render _ routeToPieces renderFunc r pdata = 
   renderPieces renderFunc (routeToPieces r) pdata
 
 renderPieces :: forall (e :: TyFun item * -> *) (pieces :: [Piece item]).
-  (forall x. Sing x -> Attr e x -> Text)
+  (forall x. Sing x -> Applied1 e x -> Text)
   -> SList pieces
-  -> Rec (Attr e) (Captures pieces)
+  -> Rec (Applied1 e) (Captures pieces)
   -> [Text]
 renderPieces renderFunc spieces attrs = 
   case spieces of
@@ -86,8 +84,8 @@ renderSymbol SSym = Text.pack (symbolVal (Proxy :: Proxy s))
 -- parsePiecesMulti = 
 
 parsePieces :: forall e (pieces :: [Piece *]).
-  (forall x. Sing x -> Text -> Maybe (Attr e x))
-  -> SList pieces -> [Text] -> Maybe (Rec (Attr e) (Captures pieces))
+  (forall x. Sing x -> Text -> Maybe (Applied1 e x))
+  -> SList pieces -> [Text] -> Maybe (Rec (Applied1 e) (Captures pieces))
 parsePieces parsePiece s pieces = 
   case s of
     SNil -> if null pieces then Just RNil else Nothing

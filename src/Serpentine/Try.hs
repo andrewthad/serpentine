@@ -11,6 +11,7 @@ import Serpentine.Playground
 import Data.Text (Text)
 import Data.Vinyl.Core
 import qualified Data.Text as Text
+import Data.Singletons.Class (Applied1(..))
 
 $(singletons [d|
   data Item = ItemInt | ItemText | ItemBool
@@ -47,19 +48,19 @@ type family ItemType (x :: Item) where
 
 genDefunSymbols [''ItemType]
 
-renderAnyItem :: SItem x -> Attr ItemTypeSym0 x -> Text
+renderAnyItem :: SItem x -> Applied1 ItemTypeSym0 x -> Text
 renderAnyItem x attr = case x of
-  SItemInt -> Text.pack $ show $ getAttr attr
-  SItemText -> getAttr attr
-  SItemBool -> if getAttr attr then "yes" else "no"
+  SItemInt -> Text.pack $ show $ getApplied1 attr
+  SItemText -> getApplied1 attr
+  SItemBool -> if getApplied1 attr then "yes" else "no"
 
 renderMyRoute :: SMyRoute x 
-              -> Rec (Attr ItemTypeSym0) (Captures (Plan x)) 
+              -> Rec (Applied1 ItemTypeSym0) (Captures (Plan x)) 
               -> [Text]
 renderMyRoute = render (Proxy :: Proxy PlanSym0) sPlan renderAnyItem 
 
 test1, test2, test3 :: [Text]
-test1 = renderMyRoute SProfileR (Attr 33 :& RNil)
+test1 = renderMyRoute SProfileR (Applied1 33 :& RNil)
 test2 = renderMyRoute SUsersR RNil
-test3 = renderMyRoute (SDogR SViewR) (Attr 12 :& RNil)
+test3 = renderMyRoute (SDogR SViewR) (Applied1 12 :& RNil)
 

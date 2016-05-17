@@ -89,11 +89,12 @@ parse :: forall
      (kproxy :: KProxy route) (e :: TyFun item * -> *) 
      (r :: TyFun route [Piece item] -> *).
        (kproxy ~ 'KProxy, SEnum kproxy, SBounded kproxy)
-  => (forall (x :: item). Sing x -> Text -> Maybe (Applied1 e x))
+  => Proxy r
+  -> (forall (x :: item). Sing x -> Text -> Maybe (Applied1 e x))
   -> (forall (j :: route). Sing j -> Sing (Apply r j))
   -> [Text] 
   -> Maybe (SomeSingWith1 kproxy (Results e r))
-parse = parsePiecesMulti (downgradeSList (sEnumFromTo sMinBound sMaxBound))
+parse _ = parsePiecesMulti (downgradeSList (sEnumFromTo sMinBound sMaxBound))
 
 parsePiecesMulti :: forall 
      (kproxy :: KProxy route) (e :: TyFun item * -> *) 

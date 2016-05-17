@@ -12,7 +12,8 @@ import Data.Vinyl.Core
 import Data.Text (Text)
 import qualified Data.Text as Text
 import GHC.TypeLits
-import Data.Singletons.Class (Applied1(..))
+import Data.Singletons.Class (Applied1(..),SomeSingWith1(..))
+import Data.Maybe
 
 data Piece x = Static Symbol | Capture x
 
@@ -76,16 +77,47 @@ renderSymbol SSym = Text.pack (symbolVal (Proxy :: Proxy s))
 --                   -> Rec (Attre (PiecesNestedTuple (Apply g a))
 --                   -> SomeRoutePieces g
 -- 
--- parsePiecesMulti :: forall e (pieces :: [Piece *]).
---   SList 
---   -> (forall x. Sing x -> Text -> Maybe (Attr e x))
---   -> [Text] 
---   -> Maybe (Rec (Attr e) (Captures pieces))
--- parsePiecesMulti = 
 
-parsePieces :: forall e (pieces :: [Piece *]).
+newtype Results (e :: TyFun item * -> *) (f :: TyFun r [Piece item] -> *) (route :: r) = Results 
+  { getResults :: Rec (Applied1 e) (Captures (Apply f route)) }
+
+downgradeSList :: forall (kproxy :: KProxy k) (ks :: [k]). (kproxy ~ 'KProxy) => SList ks -> [SomeSing kproxy]
+downgradeSList SNil = []
+downgradeSList (SCons a as) = SomeSing a : downgradeSList as
+
+parse :: forall
+     (kproxy :: KProxy route) (e :: TyFun item * -> *) 
+     (r :: TyFun route [Piece item] -> *).
+       (kproxy ~ 'KProxy, SEnum kproxy, SBounded kproxy)
+  => (forall (x :: item). Sing x -> Text -> Maybe (Applied1 e x))
+  -> (forall (j :: route). Sing j -> Sing (Apply r j))
+  -> [Text] 
+  -> Maybe (SomeSingWith1 kproxy (Results e r))
+parse = parsePiecesMulti (downgradeSList (sEnumFromTo sMinBound sMaxBound))
+
+parsePiecesMulti :: forall 
+     (kproxy :: KProxy route) (e :: TyFun item * -> *) 
+     (r :: TyFun route [Piece item] -> *).
+       (kproxy ~ 'KProxy)
+  => [SomeSing kproxy]
+  -> (forall (x :: item). Sing x -> Text -> Maybe (Applied1 e x))
+  -> (forall (j :: route). Sing j -> Sing (Apply r j))
+  -> [Text] 
+  -> Maybe (SomeSingWith1 kproxy (Results e r))
+parsePiecesMulti routes parsePiece sRouteToPieces pieces = 
+  listToMaybe $ mapMaybe 
+    (\(SomeSing route) -> 
+      case parsePieces parsePiece (sRouteToPieces route) pieces of
+        Nothing -> Nothing
+        Just a -> Just (SomeSingWith1 route (Results a))
+    )
+    routes
+
+parsePieces :: forall e (pieces :: [Piece item]).
   (forall x. Sing x -> Text -> Maybe (Applied1 e x))
-  -> SList pieces -> [Text] -> Maybe (Rec (Applied1 e) (Captures pieces))
+  -> SList pieces -> [Text] 
+  -> Maybe (Rec (Applied1 e) (Captures pieces))
+  -- -> Maybe (Results e pieces)
 parsePieces parsePiece s pieces = 
   case s of
     SNil -> if null pieces then Just RNil else Nothing

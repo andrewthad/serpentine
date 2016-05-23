@@ -1,13 +1,13 @@
 name:                serpentine
 version:             0.2
-synopsis:            Simple project template from stack
-description:         Please see README.md
+synopsis:            Haskell routes using dependent types
+description:         Please see README.markdown
 homepage:            https://github.com/andrewthad/serpentine#readme
 license:             BSD3
 license-file:        LICENSE
-author:              Author name here
-maintainer:          example@example.com
-copyright:           2010 Author Here
+author:              Andrew Martin
+maintainer:          andrew.thaddeus@gmail.com
+copyright:           2016 Andrew Martin
 category:            Web
 build-type:          Simple
 cabal-version:       >=1.10

@@ -16,8 +16,8 @@ import Data.Singletons.Class (Applied1(..))
 $(singletons [d|
   data Item = ItemInt | ItemText | ItemBool
   data Crud = AddR | EditR | DeleteR | ViewR
-  data MyRoute = UsersR 
-               | ProfileR 
+  data MyRoute = UsersR
+               | ProfileR
                | HomeR
                | DogR Crud
   |])
@@ -25,7 +25,7 @@ $(singletons [d|
 
 $(singletonsOnly [d|
   planCrud :: n -> Crud -> [Piece n]
-  planCrud n x = 
+  planCrud n x =
     case x of
       AddR    -> [Static "add"]
       EditR   -> [Static "edit", Capture n]
@@ -33,7 +33,7 @@ $(singletonsOnly [d|
       ViewR   -> [Static "view", Capture n]
 
   plan :: MyRoute -> [Piece Item]
-  plan x = 
+  plan x =
     case x of
       UsersR    -> [Static "user", Static "index"]
       ProfileR  -> [Static "profile", Capture ItemInt]
@@ -54,13 +54,16 @@ renderAnyItem x attr = case x of
   SItemText -> getApplied1 attr
   SItemBool -> if getApplied1 attr then "yes" else "no"
 
-renderMyRoute :: SMyRoute x 
-              -> Rec (Applied1 ItemTypeSym0) (Captures (Plan x)) 
+renderMyRoute :: SMyRoute x
+              -> Rec (Applied1 ItemTypeSym0) (Captures (Plan x))
               -> [Text]
-renderMyRoute = render (Proxy :: Proxy PlanSym0) sPlan renderAnyItem 
+renderMyRoute = render (Proxy :: Proxy PlanSym0) sPlan renderAnyItem
 
 test1, test2, test3 :: [Text]
 test1 = renderMyRoute SProfileR (Applied1 33 :& RNil)
 test2 = renderMyRoute SUsersR RNil
 test3 = renderMyRoute (SDogR SViewR) (Applied1 12 :& RNil)
+
+-- testX :: Maybe (SomeSingWith1 'KProxy (
+-- test
 

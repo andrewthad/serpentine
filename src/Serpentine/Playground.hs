@@ -21,6 +21,17 @@ data instance Sing (k :: Piece a) where
   SStatic :: (x ~ 'Static s) => SSymbol s -> Sing x
   SCapture :: (x ~ 'Capture b) => Sing b -> Sing x
 
+type SPiece = (Sing :: Piece a -> *)
+
+-- Does not actually work
+-- instance SingKind ('KProxy :: KProxy a) => SingKind ('KProxy :: KProxy (Piece a)) where
+--   type DemoteRep ('KProxy :: KProxy (Piece a)) = Piece (DemoteRep ('KProxy :: KProxy a))
+--   fromSing x =
+--     case x of
+--       SCapture a -> Capture (fromSing a)
+--       SStatic s -> Static (symbolVal s)
+
+
 type StaticSym1 s = 'Static s
 type CaptureSym1 x = 'Capture x
 
@@ -41,14 +52,14 @@ $(singletons [d|
 ------------------------
 -- Route rendering
 ------------------------
-render :: 
+render ::
      Proxy f
   -> (forall route1. Sing route1 -> Sing (Apply f route1))
   -> (forall x. Sing x -> Applied1 e x -> Text)
   -> Sing route
   -> Rec (Applied1 e) (Captures (Apply f route))
   -> [Text]
-render _ routeToPieces renderFunc r pdata = 
+render _ routeToPieces renderFunc r pdata =
   renderPieces renderFunc (routeToPieces r) pdata
 
 renderPieces :: forall (e :: TyFun item * -> *) (pieces :: [Piece item]).
@@ -56,13 +67,13 @@ renderPieces :: forall (e :: TyFun item * -> *) (pieces :: [Piece item]).
   -> SList pieces
   -> Rec (Applied1 e) (Captures pieces)
   -> [Text]
-renderPieces renderFunc spieces attrs = 
+renderPieces renderFunc spieces attrs =
   case spieces of
     SNil -> []
-    SCons spiece spiecesNext -> 
+    SCons spiece spiecesNext ->
       case spiece of
         SStatic sym -> renderSymbol sym : renderPieces renderFunc spiecesNext attrs
-        SCapture item -> 
+        SCapture item ->
           case attrs of
             x :& xs -> renderFunc item x : renderPieces renderFunc spiecesNext xs
 
@@ -73,41 +84,41 @@ renderSymbol SSym = Text.pack (symbolVal (Proxy :: Proxy s))
 -- Route parsing
 ------------------------
 -- data SomeRoutePieces (f :: TyFun k [Piece *] -> *) where
---   SomeRoutePieces :: Sing (a :: k) -> Sing (Apply g a) 
+--   SomeRoutePieces :: Sing (a :: k) -> Sing (Apply g a)
 --                   -> Rec (Attre (PiecesNestedTuple (Apply g a))
 --                   -> SomeRoutePieces g
--- 
+--
 
-newtype Results (e :: TyFun item * -> *) (f :: TyFun r [Piece item] -> *) (route :: r) = Results 
-  { getResults :: Rec (Applied1 e) (Captures (Apply f route)) }
+newtype Results (e :: TyFun item * -> *) (f :: TyFun r [Piece item] -> *) (route :: r) =
+  Results { getResults :: Rec (Applied1 e) (Captures (Apply f route)) }
 
 downgradeSList :: forall (kproxy :: KProxy k) (ks :: [k]). (kproxy ~ 'KProxy) => SList ks -> [SomeSing kproxy]
 downgradeSList SNil = []
 downgradeSList (SCons a as) = SomeSing a : downgradeSList as
 
 parse :: forall
-     (kproxy :: KProxy route) (e :: TyFun item * -> *) 
+     (kproxy :: KProxy route) (e :: TyFun item * -> *)
      (r :: TyFun route [Piece item] -> *).
        (kproxy ~ 'KProxy, SEnum kproxy, SBounded kproxy)
   => Proxy r
   -> (forall (x :: item). Sing x -> Text -> Maybe (Applied1 e x))
   -> (forall (j :: route). Sing j -> Sing (Apply r j))
-  -> [Text] 
+  -> [Text]
   -> Maybe (SomeSingWith1 kproxy (Results e r))
 parse _ = parsePiecesMulti (downgradeSList (sEnumFromTo sMinBound sMaxBound))
 
-parsePiecesMulti :: forall 
-     (kproxy :: KProxy route) (e :: TyFun item * -> *) 
+parsePiecesMulti :: forall
+     (kproxy :: KProxy route) (e :: TyFun item * -> *)
      (r :: TyFun route [Piece item] -> *).
        (kproxy ~ 'KProxy)
   => [SomeSing kproxy]
   -> (forall (x :: item). Sing x -> Text -> Maybe (Applied1 e x))
   -> (forall (j :: route). Sing j -> Sing (Apply r j))
-  -> [Text] 
+  -> [Text]
   -> Maybe (SomeSingWith1 kproxy (Results e r))
-parsePiecesMulti routes parsePiece sRouteToPieces pieces = 
-  listToMaybe $ mapMaybe 
-    (\(SomeSing route) -> 
+parsePiecesMulti routes parsePiece sRouteToPieces pieces =
+  listToMaybe $ mapMaybe
+    (\(SomeSing route) ->
       case parsePieces parsePiece (sRouteToPieces route) pieces of
         Nothing -> Nothing
         Just a -> Just (SomeSingWith1 route (Results a))
@@ -116,28 +127,28 @@ parsePiecesMulti routes parsePiece sRouteToPieces pieces =
 
 parsePieces :: forall e (pieces :: [Piece item]).
   (forall x. Sing x -> Text -> Maybe (Applied1 e x))
-  -> SList pieces -> [Text] 
+  -> SList pieces -> [Text]
   -> Maybe (Rec (Applied1 e) (Captures pieces))
   -- -> Maybe (Results e pieces)
-parsePieces parsePiece s pieces = 
+parsePieces parsePiece s pieces =
   case s of
     SNil -> if null pieces then Just RNil else Nothing
-    SCons spiece snext -> 
+    SCons spiece snext ->
       case pieces of
         [] -> Nothing
-        (piece:piecesNext) -> 
+        (piece:piecesNext) ->
           case spiece of
-            SStatic sym -> 
+            SStatic sym ->
               if renderSymbol sym == piece
                 then parsePieces parsePiece snext piecesNext
                 else Nothing
             SCapture sitem -> (:&)
-              <$> parsePiece sitem piece 
+              <$> parsePiece sitem piece
               <*> parsePieces parsePiece snext piecesNext
 
--- parseSingle :: 
+-- parseSingle ::
 --   (forall x. Sing x -> Text -> Maybe (Attr e x))
 --   -> SPiece item -> Text -> Maybe (Attr e item)
--- parseSingle 
+-- parseSingle
 
 
